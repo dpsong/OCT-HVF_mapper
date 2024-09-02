@@ -1,0 +1,9 @@
+Time: 05:10
+FP: 0%
+FN: 0%
+FL: 1/14
+Eye: Left
+Age: 25
+MD: -2.51 dB P < 5%
+PSD: 2.14 dB P < 5%
+VFI: 96%
