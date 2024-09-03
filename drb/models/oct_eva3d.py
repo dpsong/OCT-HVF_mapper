@@ -10,7 +10,6 @@ from timm.models.layers import trunc_normal_
 from .base import Base
 from .builder import MODELS
 
-
 class FuseSliceLayer(nn.Module):
 
     def __init__(self, emb_dim, *args, **kwargs) -> None:
@@ -90,11 +89,9 @@ class OCTEVA3D(Base):
             img.dtype)  # num 
         cls_target = target[:, self.reg_targets_dim : self.reg_targets_dim + self.cls_targets_dim].to(torch.long).reshape(-1) # 104:156
 
-
         cls_indices = weight_indices[:, self.reg_targets_dim : self.reg_targets_dim + self.cls_targets_dim].reshape(-1)
         cls_n_count = (cls_indices == 0).sum().item()
         cls_def_count = (cls_indices == 1).sum().item()
-
 
         reg_indices = weight_indices[:, 0 : self.reg_targets_dim].reshape(-1)
         reg_n_count = (reg_indices == 0).sum().item()
