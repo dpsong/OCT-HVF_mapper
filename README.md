@@ -7,7 +7,6 @@ This repository is the official implementation of the paper *Predicting visual f
 1. Clone this repository and navigate to OCT-HVF_mapper folder
 ```bash
 git clone https://github.com/dpsong/OCT-HVF_mapper.git
-cd LLaVA
 ```
 
 2. Install Package
