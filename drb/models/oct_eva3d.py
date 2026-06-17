@@ -34,8 +34,7 @@ class OCTEVA3D(Base):
         self.num_classes = num_classes
         self.fp16_enabled = True
 
-        # eva = timm.models.eva02_large_patch14_224(pretrained=True)
-        eva = timm.models.eva02_tiny_patch14_224(pretrained=True)
+        eva = timm.models.eva02_large_patch14_224(pretrained=True)
         self.cls_token = eva.cls_token
         self.pos_embed = eva.pos_embed
         self.patch_embed = eva.patch_embed
