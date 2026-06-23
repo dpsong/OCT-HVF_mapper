@@ -119,17 +119,14 @@ class OCTEVA3D(Base):
         if reg_def_count > 0:
             def_reg_loss = def_reg_loss / reg_def_count
 
-
-        if self.num_classes == 5:
-            alpha = 1.5
-        else:
-            alpha = 2.5
+        w_n_cls = 12.5
+        w_abn_cls = 5
         
         loss = {
             'n_reg_loss': n_reg_loss,
-            'n_cls_loss': alpha*n_cls_loss * 5,
+            'n_cls_loss': n_cls_loss * w_n_cls,
             'def_reg_loss': def_reg_loss,
-            'def_cls_loss': def_cls_loss * 5,
+            'def_cls_loss': def_cls_loss * w_abn_cls,
             'blind_reg_loss':blind_reg_loss,
         }
         return loss
