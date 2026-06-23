@@ -176,6 +176,6 @@ class OCTEVA3D(Base):
             else:
                 x = blk(x)
 
-        reg_pred = self.reg_head(x[-2])  #  B 52 1
-        cls_pred = self.cls_head(x[-1]).view(-1, self.cls_targets_dim, self.num_classes)  # B 52 5
+        reg_pred = self.reg_head(x[-2])  
+        cls_pred = self.cls_head(x[-1]).view(-1, self.cls_targets_dim, self.num_classes)
         return dict(reg=reg_pred, cls=cls_pred, md=0)
