@@ -183,7 +183,7 @@ class OCTVFDataset(Base):
 
 
 if __name__ == '__main__':
-    data_root = '/cpfs01/user/songdiping/Workspaces/Data/oct2vf/zoc3d-2022_resize384/'
+    data_root = 'oct2vf/zoc3d-2022/'
     split = 'TrainVal_split/macula_val_split.json'
     test_dataset = OCTVFDataset(data_root, split, num_classes=5)
     print(test_dataset.__len__())
