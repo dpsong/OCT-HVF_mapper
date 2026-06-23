@@ -118,7 +118,8 @@ class OCTVFDataset(Base):
             vf_target = torch.Tensor([-1])
         else:
             vf_path = sample['vf']
-            vf_data = np.load(vf_path, allow_pickle=True).item()
+            # vf_data = np.load(vf_path, allow_pickle=True).item()
+            vf_data = json.load(vf_path)
 
             vf_num = np.array(vf_data['Sensitivity'])
             vf_num -= 20
