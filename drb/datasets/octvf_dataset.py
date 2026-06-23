@@ -119,7 +119,8 @@ class OCTVFDataset(Base):
         else:
             vf_path = sample['vf']
             # vf_data = np.load(vf_path, allow_pickle=True).item()
-            vf_data = json.load(vf_path)
+            with open(vf_path) as vf:
+                vf_data = json.load(vf)
 
             vf_num = np.array(vf_data['Sensitivity'])
             vf_num -= 20
