@@ -55,7 +55,7 @@ class OCTVFDataset(Base):
             for _, vf_path in enumerate(data):
                 octpath = data[vf_path]
                 vf_path = os.path.join(data_root, vf_path)
-                if '/cpfs01/user/songdiping/Workspaces/' not in octpath:
+                if '/home/user/Workspaces/' not in octpath:
                     octpath = os.path.join(data_root, octpath)
                 oct_frames = list()
                 for i in range(256):
