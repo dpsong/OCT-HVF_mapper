@@ -54,7 +54,8 @@ class OCTVFDataset(Base):
             data = json.load(fr)
             for _, vf_path in enumerate(data):
                 octpath = data[vf_path]
-                vf_path = os.path.join(data_root, vf_path)
+                vf_path = os.path.join(self._data_root, vf_path)
+                octpath = os.path.join(self._data_root, octpath)
                 oct_frames = list()
                 for i in range(256):
                     frame = os.path.join(octpath, 'slice_{}.png'.format(i))
