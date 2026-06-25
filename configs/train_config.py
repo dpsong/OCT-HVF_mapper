@@ -20,7 +20,7 @@ optimizer = dict(
             'norm.': dict(lr_mult=0.1, decay_mult=1.),
             'rope.': dict(lr_mult=0.1, decay_mult=1.),
         }))
-optimizer_config = dict(grad_clip=100.)
+optimizer_config = dict()
 runner = dict(type='EpochBasedRunner', max_epochs=10)
 data = dict(
     samples_per_gpu=8,
@@ -57,7 +57,6 @@ lr_config = dict(policy='CosineAnnealing',
                  warmup_ratio=0.001,
                  warmup_iters=100,
                  warmup_by_epoch=False)
-optimizer_config = dict()
 checkpoint_config = dict(by_epoch=True, interval=1)
 log_config = dict(
     interval=25,

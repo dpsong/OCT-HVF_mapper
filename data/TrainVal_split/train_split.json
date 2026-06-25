@@ -1,3 +1,4 @@
 {
-    "data/example/vf/000001/20210311_091841_091079.json": "data/example/oct/000001/101754_slices/",
+    "vf/000001/000001.json": "oct/000001/101754_slices/",
+    "vf/000003/000003.json": "oct/000003/73921_slices/"
 }

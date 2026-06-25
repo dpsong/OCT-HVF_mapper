@@ -1,0 +1,9 @@
+Time: 11
+FP: 0 %
+FN: 0 %
+FL: 0/10
+Eye: Left
+Age: 56
+MD: -1.55 dB P < 10%
+PSD: 1.41 dB
+VFI: 99%

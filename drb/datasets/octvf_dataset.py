@@ -1,68 +1,106 @@
 import os
 import json
 from concurrent.futures import ThreadPoolExecutor
-from posixpath import split
 from mmcv.utils import print_log
 
 from PIL import Image
 import numpy as np
-from sklearn.metrics import roc_auc_score
 
 from mmcv.parallel import DataContainer as DC
 import torch
-from torchvision import transforms
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-import torch.nn.functional as nnF
 from .builder import DATASETS
 from .base import Base
-import torch.nn.functional as F
 
 def get_vf_info(filename):
+    age = None
     with open(filename, 'r') as f:
         lines = f.readlines()
         for line in lines:
             if 'Age' in line:
                 age = int(line.strip().split()[1])
+                break
+    if age is None:
+        raise ValueError(f'Failed to find Age in VF metadata file: {filename}')
     return age
 
 
 @DATASETS.register_module()
 class OCTVFDataset(Base):
 
+    @staticmethod
+    def _resolve_path(data_root, path):
+        if path is None:
+            return None
+        if os.path.isabs(path):
+            return path
+        return os.path.join(data_root, path)
+
     def __init__(self,
                  data_root,
-                 split,
-                 num_classes,
+                 split=None,
+                 num_classes=None,
                  slice_dim=8,
                  num_thread=1,
                  reg_targets_dim=54,
                  cls_targets_dim=52,
                  mode='train',
+                 oct_path=None,
+                 age=None,
+                 test_age=None,
                  dataAug=False,
                  *args,
                  **kw_args) -> None:
+        if num_classes is None:
+            raise ValueError('num_classes must be provided.')
         self._data_root = data_root
         self.dataAug = dataAug
         self.slice_num = slice_dim
         self.reg_targets_dim = reg_targets_dim
         self.cls_targets_dim = cls_targets_dim
         self.mode = mode
+        self.test_age = test_age
         self._db = list()
 
-        
-        with open(split) as fr:
-            data = json.load(fr)
-            for _, vf_path in enumerate(data):
-                octpath = data[vf_path]
-                vf_path = os.path.join(self._data_root, vf_path)
-                octpath = os.path.join(self._data_root, octpath)
-                oct_frames = list()
-                for i in range(256):
-                    frame = os.path.join(octpath, 'slice_{}.png'.format(i))
-                    oct_frames.append(frame)
-                age = get_vf_info(vf_path.replace('.json', '.txt'))
-                sample = {'oct_frames': oct_frames, 'vf': vf_path, 'age':age}
-                self._db.append(sample)
+        if split is not None and oct_path is not None:
+            raise ValueError('split and oct_path cannot be provided at the same time.')
+
+        if split is not None:
+            with open(split) as fr:
+                data = json.load(fr)
+                for _, vf_path in enumerate(data):
+                    octpath = data[vf_path]
+                    vf_path = self._resolve_path(self._data_root, vf_path)
+                    octpath = self._resolve_path(self._data_root, octpath)
+                    oct_frames = list()
+                    for i in range(256):
+                        frame = os.path.join(octpath, 'slice_{}.png'.format(i))
+                        oct_frames.append(frame)
+                    vf_txt_path = vf_path.replace('.json', '.txt')
+                    if os.path.exists(vf_txt_path):
+                        sample_age = get_vf_info(vf_txt_path)
+                    elif self.mode == 'test' and self.test_age is not None:
+                        sample_age = int(self.test_age)
+                    else:
+                        raise FileNotFoundError(
+                            f'Failed to find VF metadata file: {vf_txt_path}. '
+                            'Provide the matching .txt file or set test_age for test mode.')
+                    sample = {'oct_frames': oct_frames, 'vf': vf_path, 'age': sample_age}
+                    self._db.append(sample)
+        elif oct_path is not None:
+            if self.mode != 'test':
+                raise ValueError('oct_path inference is only supported when mode="test".')
+            if age is None:
+                raise ValueError('age must be provided when using oct_path inference.')
+            octpath = self._resolve_path(self._data_root, oct_path)
+            oct_frames = list()
+            for i in range(256):
+                frame = os.path.join(octpath, 'slice_{}.png'.format(i))
+                oct_frames.append(frame)
+            sample = {'oct_frames': oct_frames, 'vf': None, 'age': int(age)}
+            self._db.append(sample)
+        else:
+            raise ValueError('Either split or oct_path must be provided.')
         self._num_thread = num_thread
         self._threadpool = None
         self.num_classes = num_classes
@@ -161,19 +199,27 @@ class OCTVFDataset(Base):
         reg_pred = reg_pred.view(-1)
         _, cls_pred = torch.max(predicts['cls'].data.view(-1, self.num_classes),
                                1) 
-        mad = (reg_pred - reg_target).abs().mean().item()
-        acc = (cls_pred == cls_target).sum().item() / cls_target.size()[0]
+        reg_abs_sum = (reg_pred - reg_target).abs().sum().item()
+        reg_count = reg_target.numel()
+        cls_correct = (cls_pred == cls_target).sum().item()
+        cls_count = cls_target.numel()
         eval_results.append({
-            'mad': mad,
-            'acc': acc,
+            'reg_abs_sum': reg_abs_sum,
+            'reg_count': reg_count,
+            'cls_correct': cls_correct,
+            'cls_count': cls_count,
         })
 
         return eval_results
 
     @torch.no_grad()
     def evaluate(self, results, logger, **kw_args):
-        mad = sum([_['mad'] for _ in results]) / len(results)
-        acc = sum([_['acc'] for _ in results]) / len(results)
+        reg_abs_sum = sum([_['reg_abs_sum'] for _ in results])
+        reg_count = sum([_['reg_count'] for _ in results])
+        cls_correct = sum([_['cls_correct'] for _ in results])
+        cls_count = sum([_['cls_count'] for _ in results])
+        mad = reg_abs_sum / reg_count
+        acc = cls_correct / cls_count
         eval_results = dict(mad=mad,
                             acc=acc)
         print_log(
@@ -182,7 +228,7 @@ class OCTVFDataset(Base):
 
 
 if __name__ == '__main__':
-    data_root = 'oct2vf_data_2022/'
-    split = 'TrainVal_split/macula_val_split.json'
-    test_dataset = OCTVFDataset(data_root, split, num_classes=5)
+    data_root = 'data/example/'
+    split = 'data/TrainVal_split/train_split.json'
+    test_dataset = OCTVFDataset(data_root, split, num_classes=2)
     print(test_dataset.__len__())

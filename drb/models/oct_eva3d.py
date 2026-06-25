@@ -30,7 +30,7 @@ class OCTEVA3D(Base):
         super().__init__(*args, **kw_args)
         self.reg_targets_dim = reg_targets_dim
         self.cls_targets_dim = cls_targets_dim
-        self.slice_dim = slice_dim  # slice number, change 8 to 16
+        self.slice_dim = slice_dim  
         self.num_classes = num_classes
         self.fp16_enabled = True
 
@@ -78,32 +78,33 @@ class OCTEVA3D(Base):
     def forward_train(self, img, target, weight_indices, age, **kw_args): # age,
         B, _, F, H, W = img.shape
         pred = self.forward_test(img, age) # , age
-        reg_pred = (pred['reg'] * 40 + 20).reshape(-1)  # (B * 52,) 
-        cls_pred = pred['cls'].reshape(-1, self.num_classes)  #(B*52, num_classes)
+        reg_pred = (pred['reg'] * 40 + 20).reshape(-1)  # (B * reg_targets_dim,) 
+        cls_pred = pred['cls'].reshape(-1, self.num_classes)  #(B * cls_targets_dim, num_classes)
 
         CE = nn.CrossEntropyLoss(reduction='none')
         with torch.no_grad():
             target = target.detach()
-        reg_target = (target[:, 0:self.reg_targets_dim] * 40 + 20).reshape(-1).to(
+        reg_target = (target[:, 0 : self.reg_targets_dim] * 40 + 20).reshape(-1).to(
             img.dtype)  # num 
-        cls_target = target[:, self.reg_targets_dim : self.reg_targets_dim + self.cls_targets_dim].to(torch.long).reshape(-1) # 104:156
-
-        cls_indices = weight_indices[:, self.reg_targets_dim : self.reg_targets_dim + self.cls_targets_dim].reshape(-1)
-        cls_n_count = (cls_indices == 0).sum().item()
-        cls_def_count = (cls_indices == 1).sum().item()
-
         reg_indices = weight_indices[:, 0 : self.reg_targets_dim].reshape(-1)
         reg_n_count = (reg_indices == 0).sum().item()
         reg_def_count = (reg_indices == 1).sum().item()
 
+        cls_target = target[:, self.reg_targets_dim : self.reg_targets_dim + self.cls_targets_dim].to(torch.long).reshape(-1) 
+        cls_indices = weight_indices[:, self.reg_targets_dim : self.reg_targets_dim + self.cls_targets_dim].reshape(-1)
+        cls_n_count = (cls_indices == 0).sum().item()
+        cls_def_count = (cls_indices == 1).sum().item()
+
+
         reg_loss = (reg_pred - reg_target).abs()
-        n_reg_loss = reg_loss[reg_indices == 0].sum()
         def_reg_loss = reg_loss[reg_indices == 1].sum()
 
         if self.reg_targets_dim==54:
-            blind_reg_loss = reg_loss[reg_indices == -1].mean() # 2 ooints
+            # add 2 blind points
+            reg_n_count = reg_n_count + (reg_indices == -1).sum().item()
+            n_reg_loss = reg_loss[reg_indices == 0].sum() + reg_loss[reg_indices == -1].sum()
         else:
-            blind_reg_loss = torch.Tensor([0]).to(img.device)
+            n_reg_loss = reg_loss[reg_indices == 0].sum()
 
         cls_loss = CE(cls_pred, cls_target)
         n_cls_loss = cls_loss[cls_indices == 0].sum()
@@ -126,8 +127,7 @@ class OCTEVA3D(Base):
             'n_reg_loss': n_reg_loss,
             'n_cls_loss': n_cls_loss * w_n_cls,
             'def_reg_loss': def_reg_loss,
-            'def_cls_loss': def_cls_loss * w_abn_cls,
-            'blind_reg_loss':blind_reg_loss,
+            'def_cls_loss': def_cls_loss * w_abn_cls
         }
         return loss
     
