@@ -23,11 +23,11 @@ class ConcatDataset(_ConcatDataset):
 
     @torch.no_grad()
     def pre_evaluate(self, predicts, inputs):
-        self.datasets[0].pre_evaluate(predicts, inputs)
+        return self.datasets[0].pre_evaluate(predicts, inputs)
 
     @torch.no_grad()
     def evaluate(self, results, logger=None, **kw_args):
-        self.datasets[0].evaluate(results, logger, **kw_args)
+        return self.datasets[0].evaluate(results, logger, **kw_args)
 
 
 @DATASETS.register_module()
@@ -58,8 +58,8 @@ class RepeatDataset(object):
 
     @torch.no_grad()
     def pre_evaluate(self, predicts, inputs):
-        self.dataset.pre_evaluate(predicts, inputs)
+        return self.dataset.pre_evaluate(predicts, inputs)
 
     @torch.no_grad()
     def evaluate(self, results, logger=None, **kw_args):
-        self.dataset.evaluate(results, logger, **kw_args)
+        return self.dataset.evaluate(results, logger, **kw_args)

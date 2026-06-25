@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 
@@ -23,9 +24,9 @@ GRAYSCALE_IMAGENET_STD = sum(IMAGENET_DEFAULT_STD) / 3.0
 def get_vf_info(filename: str) -> int:
     with open(filename, 'r', encoding='utf-8') as file_obj:
         for line in file_obj:
-            parts = line.strip().split()
-            if len(parts) >= 2 and parts[0] == 'Age':
-                return int(parts[1])
+            match = re.match(r'^\s*Age:?\s+(\d+)\b', line)
+            if match:
+                return int(match.group(1))
     raise ValueError(f'Failed to find Age in VF metadata file: {filename}')
 
 
